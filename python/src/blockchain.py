@@ -1,10 +1,10 @@
 import hashlib
 import json
 from time import time
-from uuid import uuid4
 
 class Blockchain(object):
-    def __init__(self):
+    def __init__(self, node_identifier):
+        self.node_identifier = node_identifier
         self.current_transactions = []
         self.chain = []
 
@@ -92,33 +92,23 @@ class Blockchain(object):
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
-    
-
-# Instantiate our Node
-app = Flask(__name__)
-
-# Generate a globally unique address for this node
-node_identifier = str(uuid4()).replace('-', '')
-
-# Instantiate the Blockchain
-blockchain = Blockchain()
 
 
-@app.route('/mine', methods=['GET'])
-def mine():
-    return "We'll mine a new Block"
-  
-@app.route('/transactions/new', methods=['POST'])
-def new_transaction():
-    return "We'll add a new transaction"
+    def mine(self):
+        # We run the proof of work algorithm to get the next proof...
+        last_proof = self.last_block['proof']
+        proof = self.proof_of_work(last_proof)
 
-@app.route('/chain', methods=['GET'])
-def full_chain():
-    response = {
-        'chain': blockchain.chain,
-        'length': len(blockchain.chain),
-    }
-    return jsonify(response), 200
+        # We must receive a reward for finding the proof.
+        # The sender is "0" to signify that this node has mined a new coin.
+        self.new_transaction(
+            sender="0",
+            recipient=self.node_identifier,
+            amount=1,
+        )
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+        # Forge the new Block by adding it to the chain
+        previous_hash = self.hash(self.last_block)
+        block = self.new_block(proof, previous_hash)
+
+        return block

@@ -13,11 +13,11 @@ RUN cd /app && \
 RUN apt-get update && \
     apt-get install -y net-tools
 
-COPY src/test_app.py /app
+COPY src /app
 
 # Not using this for now
 # ENTRYPOINT [ "python" ]
 
 EXPOSE 8080
 
-CMD [ "python", "test_app.py" ]
+CMD [ "python", "node.py" ]
