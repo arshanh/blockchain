@@ -16,6 +16,7 @@ DOCKER_RUN := docker run --rm=true -p 8080:80\
 .DEFAULT_GOAL := run-detach
 
 # Build if files have changed, Run in detached mode, non-interactive
+# Use this if you just want to run in background
 run-detach:
 	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
 	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
@@ -23,13 +24,15 @@ run-detach:
 	$(DOCKER_RUN) -d -t $(IMAGE_NAME):$(IMAGE_TAG)
 
 # Build if files have changed, run and attach to contianer, non-interactive
+# Use this if you want to see stdout
 run-attach:
 	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
 	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
 	$(DOCKER_BUILD) ; }
 	$(DOCKER_RUN) -t $(IMAGE_NAME):$(IMAGE_TAG)
 
-# Same as run-attach but with interactive mode so you can use pdb 
+# Same as run-attach but with interactive mode
+# Use this if you want to use pdb
 run-debug:
 	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
 	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
