@@ -26,10 +26,10 @@ To exec shell in one of the containers (first one in the docker ps output)
 ```
 ❯ make shell
 docker exec -it $(docker ps -a -q --filter ancestor=block-node:latest --format="{{.ID}}" | head -n 1) bash
-root@004f4bace643:/app# dig blockchain
 ```
 In container see dns round-robin in action
 ```
+root@004f4bace643:/app# dig blockchain
 ; <<>> DiG 9.11.5-P4-5.1-Debian <<>> blockchain
 ;; global options: +cmd
 ;; Got answer:
