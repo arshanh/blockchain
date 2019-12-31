@@ -21,10 +21,15 @@ overall progress: 5 out of 5 tasks
 4/5: running   [==================================================>]
 5/5: running   [==================================================>]
 verify: Service converged
+```
+To exec shell in one of the containers (first one in the docker ps output)
+```
 ❯ make shell
 docker exec -it $(docker ps -a -q --filter ancestor=block-node:latest --format="{{.ID}}" | head -n 1) bash
 root@004f4bace643:/app# dig blockchain
-
+```
+In container see dns round-robin in action
+```
 ; <<>> DiG 9.11.5-P4-5.1-Debian <<>> blockchain
 ;; global options: +cmd
 ;; Got answer:
@@ -48,6 +53,12 @@ blockchain.		600	IN	A	10.0.7.5
 
 root@004f4bace643:/app# exit
 exit
+```
+As you can see all node ips of blockchain service are returned if you do a dns query on the service-name
+
+Cleanup service and network
+
+```
 ❯ make swarm-clean
 docker service rm blockchain
 blockchain
