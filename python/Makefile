@@ -3,9 +3,11 @@ USER := $(shell id -un)
 PWD := $(shell pwd)
 
 IMAGE_NAME = block-node
-SERVICE_NAME = blockchain
+SERVICE_NAME = onechain_blockchain
 NET_NAME = net-blockchain
-IMAGE_TAG = $(shell cat Dockerfile src/* requirements.txt | shasum | awk '{print substr($$1,0,11);}')
+STACK_NAME = onechain
+COMPOSE_FILE = docker-compose.yml
+IMAGE_TAG = $(shell find . -name '*.py|Dockerfile|requirements.txt|docker-compose.yml' -exec cat {} \; | shasum | awk '{print substr($$1,0,11);}')
 REPLICAS = 5
 
 # Build and tag at hash of files
@@ -62,15 +64,31 @@ shell:
 stop:
 	docker stop $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}")
 
-# Build images and create a network and launch a swarm in it
+# Deploy using docker stack 
+# Currently have to add/remove network manually because it is declared as external
+# But we only have to do this because we want to access the network
+# from outside of the stack.
+stack:
+	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
+	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
+	$(DOCKER_BUILD) ; }
+	docker network create --driver overlay --attachable $(NET_NAME)
+	docker stack deploy --compose-file $(COMPOSE_FILE) $(STACK_NAME)
+
+# Clean using docker stack 
+stack-clean:
+	docker stack rm $(STACK_NAME) 
+	docker network rm $(NET_NAME)
+
+# OLD WAY: Using only CLI (no docker compose)
 swarm:
 	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
 	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
 	$(DOCKER_BUILD) ; }
-	docker network create --driver overlay $(NET_NAME)
+	docker network create --driver overlay --attachable $(NET_NAME)
 	docker service create --replicas $(REPLICAS) --endpoint-mode dnsrr --network $(NET_NAME) --name $(SERVICE_NAME) $(IMAGE_NAME):$(IMAGE_TAG)
 
-# Cleanup blockchain service and network
+# OLD WAY: Cleanup blockchain service and network using CLIs
 swarm-clean:
 	docker service rm $(SERVICE_NAME)
 	docker network rm $(NET_NAME)
@@ -80,3 +98,17 @@ swarm-ls:
 
 swarm-ps:
 	docker service ps $(SERVICE_NAME)
+
+stack-ls:
+	docker stack ls
+
+stack-ps:
+	docker stack ps $(STACK_NAME)
+
+# Run shell in network
+test-shell:
+	docker run --network=$(NET_NAME) -it -v ~/projects/one-chain/python:/app python:3 bash
+
+swarm-info: swarm-ls swarm-ps 
+
+stack-info: stack-ps stack-ls

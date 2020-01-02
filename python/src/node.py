@@ -5,6 +5,7 @@ import requests
 from flask import Flask, jsonify, request
 
 from blockchain import Blockchain
+from util import getAddrsForHost
 
 # Instantiate our Node
 app = Flask(__name__)
@@ -12,8 +13,11 @@ app = Flask(__name__)
 # Generate a globally unique address for this node
 node_identifier = str(uuid4()).replace('-', '')
 
+# Get neighbor IPs
+neighbors = getAddrsForHost('blockchain', 80)
+
 # Instantiate the Blockchain
-blockchain = Blockchain(node_identifier)
+blockchain = Blockchain(node_identifier, neighbors)
 
 
 @app.route('/mine', methods=['GET'])

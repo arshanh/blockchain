@@ -5,11 +5,11 @@ from time import time
 import requests
 
 class Blockchain(object):
-    def __init__(self, node_identifier):
+    def __init__(self, node_identifier, neighbors):
         self.node_identifier = node_identifier
         self.current_transactions = []
         self.chain = []
-        self.nodes = set()
+        self.neighbors = neighbors
 
         # Create the genesis block
         self.new_block(previous_hash=1, proof=100)
