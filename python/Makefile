@@ -3,11 +3,18 @@ USER := $(shell id -un)
 PWD := $(shell pwd)
 
 IMAGE_NAME = block-node
-SERVICE_NAME = onechain_blockchain
+SERVICE_NAME = blockchain
 NET_NAME = net-blockchain
 STACK_NAME = onechain
-COMPOSE_FILE = docker-compose.yml
-IMAGE_TAG = $(shell find . -name '*.py|Dockerfile|requirements.txt|docker-compose.yml' -exec cat {} \; | shasum | awk '{print substr($$1,0,11);}')
+COMPOSE_FILE = docker-compose.yml # used by docker stack
+IMAGE_TAG = $(shell find . \( \
+			  -name '*.py' -o \
+			  -name 'Dockerfile' -o \
+			  -name 'requirements.txt' -o \
+			  -name 'docker-compose.yml' \) -exec cat {} \; | \
+			  shasum | awk '{print substr($$1,0,11);}')
+
+# Only used with swarm commands. Replicas for stacks set in compose file
 REPLICAS = 5
 
 # Build and tag at hash of files
@@ -112,3 +119,6 @@ test-shell:
 swarm-info: swarm-ls swarm-ps 
 
 stack-info: stack-ps stack-ls
+
+make logs:
+	docker service logs $(STACK_NAME)_$(SERVICE_NAME)

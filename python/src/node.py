@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 import requests
 from flask import Flask, jsonify, request
+import threading
 
 from blockchain import Blockchain
 from util import getAddrsForHost
@@ -19,6 +20,21 @@ neighbors = getAddrsForHost('blockchain', 80)
 # Instantiate the Blockchain
 blockchain = Blockchain(node_identifier, neighbors)
 
+@app.route('/hello', methods=['GET'])
+def hello():
+    values = request.get_json()
+
+    if not values or 'sender' not in values:
+        return 'Missing request body', 400
+
+    sender = values['sender']
+
+    print(f'Recieved hello from {sender}')
+
+    response = {
+            'hello-response': node_identifier
+            }
+    return jsonify(response), 200
 
 @app.route('/mine', methods=['GET'])
 def mine():
@@ -92,5 +108,16 @@ def consensus():
 
     return jsonify(response), 200
 
+def send_hello():
+    class HelloThread(threading.Thread):
+        @classmethod
+        def run(cls):
+            blockchain.hello()
+
+    thread = HelloThread()
+    thread.start()
+
+
 if __name__ == '__main__':
+    send_hello()
     app.run(host='0.0.0.0', port=80)

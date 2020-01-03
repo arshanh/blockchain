@@ -1,6 +1,6 @@
 import hashlib
 import json
-from time import time
+from time import time, sleep
 
 import requests
 
@@ -13,6 +13,22 @@ class Blockchain(object):
 
         # Create the genesis block
         self.new_block(previous_hash=1, proof=100)
+
+    def hello(self):
+        for neighbor in self.neighbors:
+            print(f'Sending messaged to {neighbor}')
+            for i in range(5):
+                try:
+                    r = requests.get(f'http://{neighbor}/hello',
+                                     json={"sender": self.node_identifier})
+                except:
+                    print('Retrying...')
+                    sleep(1)
+                else:
+                    break
+
+            if r.status_code != 200:
+                print(f'Hello message error: {r.status_code}')
 
     def register_node(self, address):
         """
