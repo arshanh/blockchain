@@ -2,7 +2,16 @@
 
 See makefile to see how to launch container
 
-To launch swarm:
+To launch stack:
+```
+❯ make stack
+docker network create --driver overlay --attachable net-blockchain
+l606ueujbzd5876ucwqjoxvw7
+docker stack deploy --compose-file docker-compose.yml  onechain
+Creating service onechain_blockchain
+```
+
+To launch swarm (use make stack instead):
 ```
 ❯ make swarm
 docker network create --driver overlay net-blockchain
