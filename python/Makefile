@@ -138,5 +138,5 @@ swarm-info: swarm-ls swarm-ps
 
 stack-info: stack-ps stack-ls
 
-make logs:
+logs:
 	docker service logs $(STACK_NAME)_$(SERVICE_NAME)
