@@ -27,32 +27,34 @@ DOCKER_RUN := docker run --rm=true -p 8080:80\
 .PHONY: run-detach run-attach ps stop
 .DEFAULT_GOAL := run-detach
 
+
+#######################################################################
+# Build
+#######################################################################
+# See if files are have changed since last build (by seeing if IMAGE_TAG
+# for current file hash exists). If not rebuild 
+build:
+	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
+	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
+	$(DOCKER_BUILD) ; }
+
 #######################################################################
 # Single Container targets
 #######################################################################
 
 # Build if files have changed, Run in detached mode, non-interactive
 # Use this if you just want to run in background
-run-detach:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+run-detach: build
 	$(DOCKER_RUN) -d -t $(IMAGE_NAME):$(IMAGE_TAG)
 
-# Build if files have changed, run and attach to contianer, non-interactive
+# Build, run and attach to contianer, non-interactive
 # Use this if you want to see stdout
-run-attach:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+run-attach: build
 	$(DOCKER_RUN) -t $(IMAGE_NAME):$(IMAGE_TAG)
 
 # Same as run-attach but with interactive mode
 # Use this if you want to use pdb
-run-debug:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+run-debug: build
 	$(DOCKER_RUN) -it $(IMAGE_NAME):$(IMAGE_TAG)
 
 # Get id of container running latest image
@@ -61,13 +63,15 @@ ps:
 
 # Attach to stdout of container
 attach:
-	docker attach $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}")
+	docker attach $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest \
+		--format="{{.ID}}")
 
 # Exec a shell in the container
 # This uses "head -n 1" so that if you are running a swarm it works as well
 # But obviously it will only ssh into the first container returned by docker -ps
 shell:
-	docker exec -it $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}" | head -n 1) bash
+	docker exec -it $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest \
+		--format="{{.ID}}" | head -n 1) bash
 
 # Stop container
 # If you rebuild using any of the above commands before stopping an old container this target 
@@ -83,10 +87,7 @@ stop:
 # Currently have to add/remove network manually because it is declared as external
 # But we only have to do this because we want to access the network
 # from outside of the stack.
-stack:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+stack: build
 	docker network create --driver overlay --attachable $(NET_NAME)
 	docker stack deploy --compose-file $(COMPOSE_FILE) $(STACK_NAME)
 
@@ -100,12 +101,11 @@ stack-clean:
 #######################################################################
 
 # OLD WAY: Using only CLI (no docker compose)
-swarm:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+swarm: build
 	docker network create --driver overlay --attachable $(NET_NAME)
-	docker service create --replicas $(REPLICAS) --endpoint-mode dnsrr --network $(NET_NAME) --name $(SERVICE_NAME) $(IMAGE_NAME):$(IMAGE_TAG)
+	docker service create --replicas $(REPLICAS) --endpoint-mode dnsrr \
+						  --network $(NET_NAME) --name $(SERVICE_NAME) \
+						  $(IMAGE_NAME):$(IMAGE_TAG)
 
 # OLD WAY: Cleanup blockchain service and network using CLIs
 swarm-clean:
@@ -131,7 +131,8 @@ stack-ps:
 # Run shell in network
 # This only works for my director structure atm
 test-shell:
-	docker run --network=$(NET_NAME) -it -v ~/projects/one-chain/python:/app python:3 bash
+	docker run --network=$(NET_NAME) -it -v \
+		~/projects/one-chain/python:/app python:3 bash
 
 swarm-info: swarm-ls swarm-ps 
 
