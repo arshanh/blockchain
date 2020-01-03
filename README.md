@@ -75,6 +75,15 @@ docker network rm net-blockchain
 net-blockchain
 ```
 
+Clean up stack and network
+```
+❯ make stack-clean
+docker stack rm onechain
+Removing service onechain_blockchain
+docker network rm net-blockchain
+net-blockchain
+```
+
 # Curl or use postman or use browser
 ```
 ~/projects/one-chain/python master*
