@@ -27,6 +27,10 @@ DOCKER_RUN := docker run --rm=true -p 8080:80\
 .PHONY: run-detach run-attach ps stop
 .DEFAULT_GOAL := run-detach
 
+#######################################################################
+# Single Container targets
+#######################################################################
+
 # Build if files have changed, Run in detached mode, non-interactive
 # Use this if you just want to run in background
 run-detach:
@@ -71,6 +75,10 @@ shell:
 stop:
 	docker stop $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}")
 
+#######################################################################
+# Docker Stack 
+#######################################################################
+
 # Deploy using docker stack 
 # Currently have to add/remove network manually because it is declared as external
 # But we only have to do this because we want to access the network
@@ -87,6 +95,10 @@ stack-clean:
 	docker stack rm $(STACK_NAME) 
 	docker network rm $(NET_NAME)
 
+#######################################################################
+# Docker Swarm (use stack instead)
+#######################################################################
+
 # OLD WAY: Using only CLI (no docker compose)
 swarm:
 	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
@@ -99,6 +111,10 @@ swarm:
 swarm-clean:
 	docker service rm $(SERVICE_NAME)
 	docker network rm $(NET_NAME)
+
+#######################################################################
+# Util
+#######################################################################
 
 swarm-ls:
 	docker service ls
@@ -113,6 +129,7 @@ stack-ps:
 	docker stack ps $(STACK_NAME)
 
 # Run shell in network
+# This only works for my director structure atm
 test-shell:
 	docker run --network=$(NET_NAME) -it -v ~/projects/one-chain/python:/app python:3 bash
 
