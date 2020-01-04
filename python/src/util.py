@@ -41,8 +41,8 @@ def retry(ExceptionToCheck,
     :type tries: int
     :param delay: initial delay between retries in seconds
     :type delay: int
-    :param logger: ApData.log from Cafy.py
-    :type logger: CafyLog instance
+    :param logger: logger
+    :type logger: logger instance
     :param msg: custom message to emit on retry
     :type msg: str
     :param raiseIfFails: exception to raise on failure
@@ -60,7 +60,7 @@ def retry(ExceptionToCheck,
                     return f(*args, **kwargs)
                 except ExceptionToCheck as e:
                     if msg:
-                        logger.error(msg)
+                        print(msg)
                     _msg = "%s, Retrying in %d seconds..." % (str(e), delay)
                     print(_msg)
                     if doIfFails:
