@@ -4,6 +4,8 @@ from time import time, sleep
 
 import requests
 
+from util import request
+
 class Blockchain(object):
     def __init__(self, node_identifier, neighbors):
         self.node_identifier = node_identifier
@@ -14,21 +16,20 @@ class Blockchain(object):
         # Create the genesis block
         self.new_block(previous_hash=1, proof=100)
 
-    def hello(self):
+    def _sendToNeighbors(self, path, json):
         for neighbor in self.neighbors:
             print(f'Sending messaged to {neighbor}')
-            for i in range(5):
-                try:
-                    r = requests.get(f'http://{neighbor}/hello',
-                                     json={"sender": self.node_identifier})
-                except:
-                    print('Retrying...')
-                    sleep(1)
-                else:
-                    break
+            r = request(method='GET',
+                        path=f'http://{neighbor}/{path}',
+                        json=json)
 
             if r.status_code != 200:
-                print(f'Hello message error: {r.status_code}')
+                print(f'Message error: path {path} to {neighbor}, {r.status_code}')
+
+    def hello(self):
+        self._sendToNeighbors(path='hello',
+                              json={"sender": self.node_identifier})
+
 
     def register_node(self, address):
         """
@@ -38,7 +39,7 @@ class Blockchain(object):
         """
 
         parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
+        self.neighbors.add(parsed_url.netloc)
 
     def new_block(self, proof, previous_hash=None):
         """
