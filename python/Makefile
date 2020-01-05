@@ -5,11 +5,6 @@ PWD := $(shell pwd)
 NET_NAME = net-blockchain
 STACK_NAME = onechain
 
-# Build and tag at hash of files
-DOCKER_BUILD = docker build \
-               -t $(IMAGE_NAME) . && \
-               docker tag $(IMAGE_NAME):latest $(IMAGE_NAME):$(IMAGE_TAG)
-
 DOCKER_COMPOSE = docker-compose --project-directory $(PWD)
 
 BLOCKCHAIN_COMPOSE = blockchain-compose.yml # used by docker stack
