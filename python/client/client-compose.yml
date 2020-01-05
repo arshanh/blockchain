@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  client:
+    stdin_open: true
+    tty: true
+    network_mode: "host"
+    build:
+        context: .
+        dockerfile: client/Dockerfile
+    image: client:latest

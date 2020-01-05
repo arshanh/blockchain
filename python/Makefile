@@ -2,82 +2,78 @@ SHELL = /bin/bash
 USER := $(shell id -un)
 PWD := $(shell pwd)
 
-IMAGE_NAME = block-node
-SERVICE_NAME = blockchain
 NET_NAME = net-blockchain
 STACK_NAME = onechain
-COMPOSE_FILE = docker-compose.yml # used by docker stack
-IMAGE_TAG = $(shell find . \( \
-			  -name '*.py' -o \
-			  -name 'Dockerfile' -o \
-			  -name 'requirements.txt' -o \
-			  -name 'docker-compose.yml' \) -exec cat {} \; | \
-			  shasum | awk '{print substr($$1,0,11);}')
-
-# Only used with swarm commands. Replicas for stacks set in compose file
-REPLICAS = 5
 
 # Build and tag at hash of files
 DOCKER_BUILD = docker build \
                -t $(IMAGE_NAME) . && \
                docker tag $(IMAGE_NAME):latest $(IMAGE_NAME):$(IMAGE_TAG)
 
-DOCKER_RUN := docker run --rm=true -p 8080:80\
+DOCKER_COMPOSE = docker-compose --project-directory $(PWD)
 
-.PHONY: run-detach run-attach ps stop
-.DEFAULT_GOAL := run-detach
+BLOCKCHAIN_COMPOSE = blockchain-compose.yml # used by docker stack
+BLOCKNODE_COMPOSE = blocknode/blocknode-compose.yml
+CLIENT_COMPOSE = client/client-compose.yml
+SOURCE_COMPOSE = source/source-compose.yml
+
+.PHONY: blocknode-detach 
+.DEFAULT_GOAL := 
 
 
 #######################################################################
 # Build
 #######################################################################
-# See if files are have changed since last build (by seeing if IMAGE_TAG
-# for current file hash exists). If not rebuild 
+build-blocknode:
+	$(DOCKER_COMPOSE) -f $(BLOCKNODE_COMPOSE) build
+
+build-client:
+	$(DOCKER_COMPOSE) -f $(CLIENT_COMPOSE) build
+
+build-source:
+	$(DOCKER_COMPOSE) -f $(SOURCE_COMPOSE) build
+
 build:
-	@docker inspect --type image $(IMAGE_NAME):$(IMAGE_TAG) &> /dev/null || \
-	{ echo Image $(IMAGE_NAME):$(IMAGE_TAG) not found. Building... ; \
-	$(DOCKER_BUILD) ; }
+	$(DOCKER_COMPOSE) -f $(BLOCKNODE_COMPOSE) \
+				   -f $(CLIENT_COMPOSE) \
+				   -f $(SOURCE_COMPOSE) build
 
 #######################################################################
 # Single Container targets
 #######################################################################
 
-# Build if files have changed, Run in detached mode, non-interactive
 # Use this if you just want to run in background
-run-detach: build
-	$(DOCKER_RUN) -d -t $(IMAGE_NAME):$(IMAGE_TAG)
+blocknode-detach:
+	$(DOCKER_COMPOSE) -f $(BLOCKNODE_COMPOSE) up --detach
 
-# Build, run and attach to contianer, non-interactive
 # Use this if you want to see stdout
-run-attach: build
-	$(DOCKER_RUN) -t $(IMAGE_NAME):$(IMAGE_TAG)
+blocknode-attach:
+	$(DOCKER_COMPOSE) -f $(BLOCKNODE_COMPOSE) up
 
-# Same as run-attach but with interactive mode
-# Use this if you want to use pdb
-run-debug: build
-	$(DOCKER_RUN) -it $(IMAGE_NAME):$(IMAGE_TAG)
+blocknode-down:
+	$(DOCKER_COMPOSE) -f $(BLOCKNODE_COMPOSE) down
 
-# Get id of container running latest image
-ps:
-	docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}"
+client-detach:
+	$(DOCKER_COMPOSE) -f $(CLIENT_COMPOSE) up --detach
 
-# Attach to stdout of container
-attach:
-	docker attach $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest \
-		--format="{{.ID}}")
+client-attach:
+	$(DOCKER_COMPOSE) -f $(CLIENT_COMPOSE) up
 
-# Exec a shell in the container
-# This uses "head -n 1" so that if you are running a swarm it works as well
-# But obviously it will only ssh into the first container returned by docker -ps
-shell:
-	docker exec -it $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest \
-		--format="{{.ID}}" | head -n 1) bash
+client-down:
+	$(DOCKER_COMPOSE) -f $(CLIENT_COMPOSE) down
 
-# Stop container
-# If you rebuild using any of the above commands before stopping an old container this target 
-# will no longer work as both the hash and the latest tag have changed
-stop:
-	docker stop $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME):latest --format="{{.ID}}")
+source-detach:
+	$(DOCKER_COMPOSE) -f $(SOURCE_COMPOSE) up --detach
+
+source-attach:
+	$(DOCKER_COMPOSE) -f $(SOURCE_COMPOSE) up
+
+source-down:
+	$(DOCKER_COMPOSE) -f $(SOURCE_COMPOSE) down
+
+# If you need to run redis outside of swarm (for debugging)
+redis:
+	docker run --name my-redis -p 6379:6379 --restart always --detach redis
 
 #######################################################################
 # Docker Stack 
@@ -89,27 +85,11 @@ stop:
 # from outside of the stack.
 stack: build
 	docker network create --driver overlay --attachable $(NET_NAME)
-	docker stack deploy --compose-file $(COMPOSE_FILE) $(STACK_NAME)
+	docker stack deploy --compose-file $(BLOCKCHAIN_COMPOSE) $(STACK_NAME)
 
 # Clean using docker stack 
 stack-clean:
 	docker stack rm $(STACK_NAME) 
-	docker network rm $(NET_NAME)
-
-#######################################################################
-# Docker Swarm (use stack instead)
-#######################################################################
-
-# OLD WAY: Using only CLI (no docker compose)
-swarm: build
-	docker network create --driver overlay --attachable $(NET_NAME)
-	docker service create --replicas $(REPLICAS) --endpoint-mode dnsrr \
-						  --network $(NET_NAME) --name $(SERVICE_NAME) \
-						  $(IMAGE_NAME):$(IMAGE_TAG)
-
-# OLD WAY: Cleanup blockchain service and network using CLIs
-swarm-clean:
-	docker service rm $(SERVICE_NAME)
 	docker network rm $(NET_NAME)
 
 #######################################################################
@@ -138,5 +118,10 @@ swarm-info: swarm-ls swarm-ps
 
 stack-info: stack-ps stack-ls
 
-logs:
-	docker service logs $(STACK_NAME)_$(SERVICE_NAME)
+blocknode-logs:
+	docker service logs $(STACK_NAME)_blocknode
+client-logs:
+	docker service logs $(STACK_NAME)_client
+source-logs:
+	docker service logs $(STACK_NAME)_source
+

@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  source:
+    stdin_open: true
+    tty: true
+    network_mode: "host"
+    build:
+        context: .
+        dockerfile: source/Dockerfile
+    ports:
+       - "6379:6379"
+    image: source:latest

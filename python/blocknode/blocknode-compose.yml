@@ -1,0 +1,11 @@
+version: "3.7"
+services:
+  blocknode:
+    stdin_open: true
+    tty: true
+    build:
+        context: .
+        dockerfile: blocknode/Dockerfile
+    image: blocknode:latest
+    ports:
+      - "8080:80"

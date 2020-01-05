@@ -1,0 +1,35 @@
+version: "3.7"
+services:
+  blockchain:
+    image: blocknode:latest
+    networks:
+        - net-blockchain
+    deploy:
+        endpoint_mode: dnsrr
+        replicas: 5
+
+  client:
+    image: client:latest
+    networks:
+        - net-blockchain
+    deploy:
+        endpoint_mode: dnsrr
+        replicas: 1
+
+  source:
+    image: source:latest
+    networks:
+        - net-blockchain
+    deploy:
+        endpoint_mode: dnsrr
+        replicas: 1
+
+  redis:
+    image: redis:5.0.7-alpine
+    networks:
+        - net-blockchain
+
+networks:
+  net-blockchain:
+    driver: overlay
+    external: true
